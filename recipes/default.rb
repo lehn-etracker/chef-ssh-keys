@@ -28,7 +28,7 @@ if node['ssh_keys']
           data_bag_item('users', bag_user)
 
         if data and data['ssh_keys']
-          ssh_keys += Array(data['ssh_keys'])
+          ssh_keys += Array(data['ssh_keys']).map{|x| puts "APPEND#{data['ssh_options']}"; (data['ssh_options'] ? data['ssh_options']+' '+x : x)}
         end
       end
 
@@ -36,7 +36,7 @@ if node['ssh_keys']
         Array(bag_users['groups']).each do |group_name|
           if not Chef::Config[:solo]
             search(:users, 'groups:' + group_name) do |search_user|
-              ssh_keys += Array(search_user['ssh_keys'])
+              ssh_keys += Array(search_user['ssh_keys']).map{|x| (search_user['ssh_options'] ? search_user['ssh_options']+' '+x : x)}
             end
           else
             Chef::Log.warn("[ssh-keys] This recipe uses search for users detection by groups. Chef Solo does not support search.")
@@ -57,13 +57,37 @@ if node['ssh_keys']
         if node['ssh_keys_keep_existing'] && File.exist?(authorized_keys_file)
           Chef::Log.info("Keep authorized keys from: #{authorized_keys_file}")
 
+          valid_key_regexp=%r{
+              ^((?<ssh_options>(command=|          # match valid ssh-option
+                                tunnel=|
+                                no-pty|
+                                environment=|
+                                from=|
+                                tunnel=|
+                                permitopen=|
+                                no-port-forwarding)
+                ([^\s,]*|"[^"]*")[,]*)*\s|)       # match options values either with no space, or surrounded by "
+               (?<ssh_key>(ssh-dss|               # match ssh key in any format
+                           ssh-rsa|
+                           ssh-ed25519|
+                           ecdsa-sha2-nistp256|
+                           ecdsa-sha2-nistp384|
+                           ecdsa-sha2-nistp521)
+                \s([^\s]*)
+               )
+               (.*)  # match remainder, e.g. comments
+          }x
+
           # Loading existing keys
           File.open(authorized_keys_file).each do |line|
-            if line.start_with?("ssh")
+            valid_key=valid_key_regexp.match(line)
+            if valid_key && !ssh_keys.find_index{|x| x.include?(valid_key[:ssh_key])}  # Only load valid keys and not previously loaded ones, ignoring options
               ssh_keys += Array(line.delete "\n")
+              Chef::Log.debug("[ssh-keys] Keeping key from #{authorized_keys_file}: #{line}")
+            else
+              Chef::Log.debug("[ssh-keys] Dropping key from #{authorized_keys_file}: #{line}")
             end
           end
-
           ssh_keys.uniq!
         else
           # Creating ".ssh" directory
