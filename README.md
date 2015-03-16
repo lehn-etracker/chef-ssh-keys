@@ -70,10 +70,13 @@ User data bag example (compatible with Chef [users cookbook](https://github.com/
       "ssh_keys": "ssh-rsa AAAAB3Nz...yhCw== user1"
     }
 
+SSH options can be given with "ssh_options". They will prepend every given ssh-key.
+
     knife data bag users user2
     {
       "id": "user2",
-      "ssh_keys": "ssh-rsa AAAAB3Nz...5D8F== user2"
+      "ssh_keys": "ssh-rsa AAAAB3Nz...5D8F== user2",
+      "ssh_options": "environment=\"REMOTE_USER=Foo Bar\""
     }
 
 Cookbook URLs
