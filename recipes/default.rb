@@ -28,7 +28,7 @@ if node['ssh_keys']
           data_bag_item('users', bag_user)
 
         if data and data['ssh_keys']
-          ssh_keys += Array(data['ssh_keys']).map{|x| puts "APPEND#{data['ssh_options']}"; (data['ssh_options'] ? data['ssh_options']+' '+x : x)}
+          ssh_keys += Array(data['ssh_keys']).map{|x| (data['ssh_options'] ? data['ssh_options']+' '+x : x)}
         end
       end
 
