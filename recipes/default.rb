@@ -107,13 +107,30 @@ if node['ssh_keys']
           end
         end
 
+        # local variable to determine if authorized_keys file ownership should 
+        # be managed too
+        ssh_local_system_supports_chown = true
+        if node['packages'].include?('proxmox-ve') and user['uid'] == 0
+          ssh_local_system_supports_chown = false
+        end
+        
         # Creating "authorized_keys"
-        template authorized_keys_file do
-          source "authorized_keys.erb"
-          owner user['uid']
-          group user['gid'] || user['uid']
-          mode "0600"
-          variables :ssh_keys => ssh_keys
+        if ssh_local_system_supports_chown == true
+          # authorized_keys file ownership supported
+          template authorized_keys_file do
+            source "authorized_keys.erb"
+            owner user['uid']
+            group user['gid'] || user['uid']
+            mode "0600"
+            variables :ssh_keys => ssh_keys
+          end
+        else
+          # authorized_keys file ownership not supported
+          template authorized_keys_file do
+            source "authorized_keys.erb"
+            mode "0600"
+            variables :ssh_keys => ssh_keys
+          end
         end
       end
     end
