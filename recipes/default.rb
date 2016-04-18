@@ -110,7 +110,8 @@ if node['ssh_keys']
         # local variable to determine if authorized_keys file ownership should 
         # be managed too
         ssh_local_system_supports_chown = true
-        if node['packages'].include?('proxmox-ve') and user['uid'] == 0
+        if node.include?('packages') and 
+		node['packages'].include?('proxmox-ve') and user['uid'] == 0
           ssh_local_system_supports_chown = false
         end
         
